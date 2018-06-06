@@ -1,0 +1,13 @@
+#ifndef KDOP_CL_DIRECTION_TABLE_H
+#define KDOP_CL_DIRECTION_TABLE_H
+
+#include "kdop_cl_vector3_type.clh"
+
+__constant const vector3_type DIRECTION_TABLE_4[4] = {
+  (vector3_type) (0.577350269f,  0.577350269f,  0.577350269f), // normalize(1.0f,  1.0f,  1.0f),
+  (vector3_type) (0.577350269f,  0.577350269f, -0.577350269f), // normalize(1.0f,  1.0f, -1.0f),
+  (vector3_type) (0.577350269f, -0.577350269f,  0.577350269f), // normalize(1.0f, -1.0f,  1.0f),
+  (vector3_type) (0.577350269f, -0.577350269f, -0.577350269f)  // normalize(1.0f, -1.0f, -1.0f)
+};
+
+#endif // KDOP_CL_DIRECTION_TABLE_H

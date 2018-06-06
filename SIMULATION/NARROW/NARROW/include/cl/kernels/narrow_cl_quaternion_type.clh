@@ -1,0 +1,35 @@
+#ifndef NARROW_CL_QUATERNION_TYPE_CLH
+#define NARROW_CL_QUATERNION_TYPE_CLH
+
+#include "narrow_cl_real_type.clh"
+#include "narrow_cl_vector3_type.clh"
+
+typedef float4 quaternion_type;
+
+__inline vector3_type q_imag(quaternion_type q) {
+  return (vector3_type) (q.x, q.y, q.z);
+}
+
+__inline real_type q_real(quaternion_type q) {
+  return (real_type) q.w;
+}
+
+__inline quaternion_type q_conj(quaternion_type q) {
+  return (quaternion_type) (-q_imag(q), q_real(q));
+}
+
+__inline quaternion_type qv_prod(quaternion_type q, vector3_type v) {
+  return (quaternion_type) (cross(q_imag(q), v) + v * q_real(q), -dot(q_imag(q), v));
+}
+
+__inline quaternion_type qq_prod(quaternion_type lhs, quaternion_type rhs) {
+  return (quaternion_type) (  q_real(lhs) * q_imag(rhs) + q_imag(lhs) * q_real(rhs) + cross(q_imag(lhs), q_imag(rhs))
+                            , q_real(lhs) * q_real(rhs) - dot(q_imag(lhs), q_imag(rhs))
+                            );
+}
+
+__inline vector3_type q_rotate(quaternion_type q, vector3_type v) {
+  return q_imag(qq_prod(qv_prod(q, v), q_conj(q)));
+}
+
+#endif // NARROW_CL_QUATERNION_TYPE_CLH

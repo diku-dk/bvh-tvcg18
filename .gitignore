@@ -1,32 +1,11 @@
-# Prerequisites
-*.d
+# the build folder
+Release/
 
-# Compiled Object files
-*.slo
-*.lo
-*.o
-*.obj
+# generated header files that include absolute paths
+SIMULATION/KDOP/KDOP/include/cl/kdop_cl_kernels_path.h
+SIMULATION/NARROW/NARROW/include/cl/narrow_cl_kernels_path.h
 
-# Precompiled Headers
-*.gch
-*.pch
-
-# Compiled Dynamic libraries
-*.so
-*.dylib
-*.dll
-
-# Fortran module files
-*.mod
-*.smod
-
-# Compiled Static libraries
-*.lai
-*.la
-*.a
-*.lib
-
-# Executables
-*.exe
-*.out
-*.app
+# generated binaries
+bin/rigid_body_cmd/rigid_body_cmd
+bin/rigid_body_gui/rigid_body_gui
+lib/

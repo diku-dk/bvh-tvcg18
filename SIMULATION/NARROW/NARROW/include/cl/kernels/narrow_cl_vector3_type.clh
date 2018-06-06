@@ -1,0 +1,6 @@
+#ifndef NARROW_CL_VECTOR3_TYPE_CLH
+#define NARROW_CL_VECTOR3_TYPE_CLH
+
+typedef float3 vector3_type;
+
+#endif // NARROW_CL_VECTOR3_TYPE_CLH

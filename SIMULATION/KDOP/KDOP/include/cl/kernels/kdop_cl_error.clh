@@ -1,0 +1,36 @@
+#ifndef KDOP_CL_ERROR_CLH
+#define KDOP_CL_ERROR_CLH
+
+#ifndef __NDEBUG_DIKUCL
+
+#ifndef __MAX_ERROR_CODES
+#warning "__MAX_ERROR_CODES should be specified, using 1024"
+#define __MAX_ERROR_CODES 1024
+#endif // __MAX_ERROR_CODES
+
+#define RAISE(condition, codes, n, error_codes, error_size)           \
+  do {                                                                \
+    if (condition) {                                                  \
+      uint __min = (n) < __MAX_ERROR_CODES ? (n) : __MAX_ERROR_CODES; \
+      if (atomic_cmpxchg((error_size), 0, __min) == 0) {              \
+        for (uint i = 0; i < __min; ++i) {                            \
+          (error_codes)[i] = (codes)[i];                              \
+        }                                                             \
+      }                                                               \
+      /* return; */                                                   \
+    }                                                                 \
+  } while (false)
+#else // __NDEBUG_DIKUCL
+#define RAISE(condition, codes, n, error_codes, error_size) \
+  do {} while (false)
+
+#endif // __NDEBUG_DIKUCL
+
+#define GUARD_EXT(index, length, codes, n, error_codes, error_size) \
+  RAISE(index >= length, codes, n, error_codes, error_size)
+
+// Raises 3 error codes: line of code, index trying to access, length of accessed array
+#define GUARD(index, length, error_codes, error_size) \
+  GUARD_EXT(index, length, ((uint[]) { __LINE__, index, length }), 3, error_codes, error_size)
+
+#endif // KDOP_CL_ERROR_CLH

@@ -1,0 +1,15 @@
+#ifndef KDOP_CL_CONTACT_POINT_CLH
+#define KDOP_CL_CONTACT_POINT_CLH
+
+#include "kdop_cl_index_type.clh"
+#include "kdop_cl_real_type.clh"
+#include "kdop_cl_vector3_type.clh"
+
+typedef struct ContactPoint {
+    vector3_type p;
+    vector3_type n;
+    real_type d;
+    index_type tp;
+} ContactPoint;
+
+#endif // KDOP_CL_CONTACT_POINT_CLH

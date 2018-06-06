@@ -1,0 +1,311 @@
+#ifndef KDOP_CL_COMPUTE_CONTACTS_CLH
+#define KDOP_CL_COMPUTE_CONTACTS_CLH
+
+#include "kdop_cl_contact_point.clh"
+#include "kdop_cl_index_type.clh"
+#include "kdop_cl_real_type_64.clh"
+#include "kdop_cl_tetrahedron_surface_info.clh"
+#include "kdop_cl_vector3_type_64.clh"
+
+/* pretty much a blind copy of kdop_compute_contacts.h */
+
+// define prototype function to make the Apple OpenCL compiler happy
+void compute_contacts(
+                      vector3_type_64        *restrict A,
+                      TetrahedronSurfaceInfo           tsi_A,
+                      vector3_type_64        *restrict B,
+                      TetrahedronSurfaceInfo           tsi_B,
+    __global          ContactPoint           *restrict contact_points,
+    __global volatile uint                   *restrict contact_points_size,
+                      index_type                       test_pair_index);
+
+inline real_type_64 norm_1(vector3_type_64 v) {
+    vector3_type_64 _v = fabs(v);
+    return max(max(_v.x, _v.y), _v.z);
+}
+
+inline void report_contact(
+                          vector3_type_64           p,
+                          vector3_type_64           n,
+                          vector3_type_64           a,
+                          real_type_64              h,
+                          index_type                test_pair_index,
+        __global          ContactPoint    *restrict contact_points,
+        __global volatile uint            *restrict contact_points_size,
+                          bool                      condition
+        )
+{
+    real_type_64 d = dot(n, p - a);
+    if(condition && lt_64(fabs(d), h)) {
+        uint contact_points_pos = atomic_inc(contact_points_size);
+        contact_points[contact_points_pos].p = convert_vector3_type(p);
+        contact_points[contact_points_pos].n = convert_vector3_type(n);
+        contact_points[contact_points_pos].d = convert_real_type(d);
+        contact_points[contact_points_pos].tp = test_pair_index;
+    }
+}
+
+void compute_contacts(
+                      vector3_type_64        *restrict A,
+                      TetrahedronSurfaceInfo           tsi_A,
+                      vector3_type_64        *restrict B,
+                      TetrahedronSurfaceInfo           tsi_B,
+    __global          ContactPoint           *restrict contact_points,
+    __global volatile uint                   *restrict contact_points_size,
+                      index_type                       test_pair_index
+)
+{
+    // lookup tables for later
+    uchar face_idx[4][2];
+    face_idx[0][0] = 1; face_idx[0][1] = 0;
+    face_idx[1][0] = 0; face_idx[1][1] = 1;
+    face_idx[2][0] = 0; face_idx[2][1] = 2;
+    face_idx[3][0] = 0; face_idx[3][1] = 3;
+    
+    uchar edge_table[6][2];
+    edge_table[0][0] = 0; edge_table[0][1] = 1;
+    edge_table[1][0] = 1; edge_table[1][1] = 2;
+    edge_table[2][0] = 2; edge_table[2][1] = 3;
+    edge_table[3][0] = 0; edge_table[3][1] = 3;
+    edge_table[4][0] = 0; edge_table[4][1] = 2;
+    edge_table[5][0] = 1; edge_table[5][1] = 3;
+    
+    // normals of tetrahedron a
+    vector3_type_64 face_norms_a[4];
+    bool flip_normal;
+    
+    face_norms_a[0] = normalize(cross(A[2]-A[1],A[3]-A[1]));
+    flip_normal = gt_64(dot(face_norms_a[0], A[0]-A[1]), 0);
+    face_norms_a[0] = flip_normal * (-face_norms_a[0]) + (!flip_normal) * face_norms_a[0];
+
+    face_norms_a[1] = normalize(cross(A[2]-A[0],A[3]-A[0]));
+    flip_normal = gt_64(dot(face_norms_a[1], A[1]-A[0]), 0);
+    face_norms_a[1] = flip_normal * (-face_norms_a[1]) + (!flip_normal) * face_norms_a[1];
+
+    face_norms_a[2] = normalize(cross(A[1]-A[0],A[3]-A[0]));
+    flip_normal = gt_64(dot(face_norms_a[2], A[2]-A[0]), 0);
+    face_norms_a[2] = flip_normal * (-face_norms_a[2]) + (!flip_normal) * face_norms_a[2];
+
+    face_norms_a[3] = normalize(cross(A[1]-A[0],A[2]-A[0]));
+    flip_normal = gt_64(dot(face_norms_a[3], A[3]-A[0]), 0);
+    face_norms_a[3] = flip_normal * (-face_norms_a[3]) + (!flip_normal) * face_norms_a[3];
+    
+    real_type_64 point_face_dist[4];
+    bool lt_zero[4], update_min_prod;
+    
+    real_type_64 min_prod = MAX_REAL_TYPE_64;
+    uchar best_a = 4, best_b = 4;
+    
+    // remember some variables for contact point reporting
+    vector3_type_64 n = convert_vector3_type_64((float3)(0, 0, 0));
+    vector3_type_64 a0 = convert_vector3_type_64((float3)(0, 0, 0));
+    vector3_type_64 a1 = convert_vector3_type_64((float3)(0, 0, 0));
+    real_type_64 h = convert_real_type_64(0);
+
+    // face normals of tetrahedron b and update of the best aligned normals
+    vector3_type_64 face_norm_b = normalize(cross(B[2]-B[1],B[3]-B[1]));
+    flip_normal = gt_64(dot(face_norm_b, B[0]-B[1]), 0);
+    face_norm_b = flip_normal * (-face_norm_b) + (!flip_normal) * face_norm_b;
+    for (uchar fA = 0; fA < 4; ++fA) {
+        real_type_64 temp = dot(face_norms_a[fA], face_norm_b);
+        update_min_prod = tsi_A.vertex_on_surface[fA] && tsi_B.vertex_on_surface[0];
+        update_min_prod = update_min_prod && lt_64(temp, min_prod);
+        min_prod = update_min_prod * temp + (!update_min_prod) * min_prod;
+        best_a = update_min_prod * fA + (!update_min_prod) * best_a;
+        best_b = (!update_min_prod) * best_b;
+        n = update_min_prod * face_norms_a[fA] + (!update_min_prod) * n;
+        a0 = update_min_prod * A[face_idx[fA][0]] + (!update_min_prod) * a0;
+        a1 = update_min_prod * A[face_idx[fA][1]] + (!update_min_prod) * a1;
+        h = update_min_prod * fabs(dot(n, a1 - a0) / 2) + (!update_min_prod) * h;
+    }
+    point_face_dist[0] = dot(face_norm_b, A[0] - B[1]);
+    lt_zero[0] = lt_64(point_face_dist[0], 0);
+    point_face_dist[1] = dot(face_norm_b, A[1] - B[1]);
+    lt_zero[1] = lt_64(point_face_dist[1], 0);
+    point_face_dist[2] = dot(face_norm_b, A[2] - B[1]);
+    lt_zero[2] = lt_64(point_face_dist[2], 0);
+    point_face_dist[3] = dot(face_norm_b, A[3] - B[1]);
+    lt_zero[3] = lt_64(point_face_dist[3], 0);
+    
+    face_norm_b = normalize(cross(B[2]-B[0],B[3]-B[0]));
+    flip_normal = gt_64(dot(face_norm_b, B[1]-B[0]), 0);
+    face_norm_b = flip_normal * (-face_norm_b) + (!flip_normal) * face_norm_b;
+    for (uchar fA = 0; fA < 4; ++fA) {
+        real_type_64 temp = dot(face_norms_a[fA], face_norm_b);
+        update_min_prod = tsi_A.vertex_on_surface[fA] && tsi_B.vertex_on_surface[1];
+        update_min_prod = update_min_prod && lt_64(temp, min_prod);
+        min_prod = update_min_prod * temp + (!update_min_prod) * min_prod;
+        best_a = update_min_prod * fA + (!update_min_prod) * best_a;
+        best_b = update_min_prod + (!update_min_prod) * best_b;
+        n = update_min_prod * face_norms_a[fA] + (!update_min_prod) * n;
+        a0 = update_min_prod * A[face_idx[fA][0]] + (!update_min_prod) * a0;
+        a1 = update_min_prod * A[face_idx[fA][1]] + (!update_min_prod) * a1;
+        h = update_min_prod * fabs(dot(n, a1 - a0) / 2) + (!update_min_prod) * h;
+    }
+    point_face_dist[0] = dot(face_norm_b, A[0] - B[0]);
+    lt_zero[0] = lt_zero[0] && lt_64(point_face_dist[0], 0);
+    point_face_dist[1] = dot(face_norm_b, A[1] - B[0]);
+    lt_zero[1] = lt_zero[1] && lt_64(point_face_dist[1], 0);
+    point_face_dist[2] = dot(face_norm_b, A[2] - B[0]);
+    lt_zero[2] = lt_zero[2] && lt_64(point_face_dist[2], 0);
+    point_face_dist[3] = dot(face_norm_b, A[3] - B[0]);
+    lt_zero[3] = lt_zero[3] && lt_64(point_face_dist[3], 0);
+    
+    face_norm_b = normalize(cross(B[1]-B[0],B[3]-B[0]));
+    flip_normal = gt_64(dot(face_norm_b, B[2]-B[0]), 0);
+    face_norm_b = flip_normal * (-face_norm_b) + (!flip_normal) * face_norm_b;
+    for (uchar fA = 0; fA < 4; ++fA) {
+        real_type_64 temp = dot(face_norms_a[fA], face_norm_b);
+        update_min_prod = tsi_A.vertex_on_surface[fA] && tsi_B.vertex_on_surface[2];
+        update_min_prod = update_min_prod && lt_64(temp, min_prod);
+        min_prod = update_min_prod * temp + (!update_min_prod) * min_prod;
+        best_a = update_min_prod * fA + (!update_min_prod) * best_a;
+        best_b = update_min_prod * 2 + (!update_min_prod) * best_b;
+        n = update_min_prod * face_norms_a[fA] + (!update_min_prod) * n;
+        a0 = update_min_prod * A[face_idx[fA][0]] + (!update_min_prod) * a0;
+        a1 = update_min_prod * A[face_idx[fA][1]] + (!update_min_prod) * a1;
+        h = update_min_prod * fabs(dot(n, a1 - a0) / 2) + (!update_min_prod) * h;
+    }
+    point_face_dist[0] = dot(face_norm_b, A[0] - B[0]);
+    lt_zero[0] = lt_zero[0] && lt_64(point_face_dist[0], 0);
+    point_face_dist[1] = dot(face_norm_b, A[1] - B[0]);
+    lt_zero[1] = lt_zero[1] && lt_64(point_face_dist[1], 0);
+    point_face_dist[2] = dot(face_norm_b, A[2] - B[0]);
+    lt_zero[2] = lt_zero[2] && lt_64(point_face_dist[2], 0);
+    point_face_dist[3] = dot(face_norm_b, A[3] - B[0]);
+    lt_zero[3] = lt_zero[3] && lt_64(point_face_dist[3], 0);
+    
+    face_norm_b = normalize(cross(B[1]-B[0],B[2]-B[0]));
+    flip_normal = gt_64(dot(face_norm_b, B[3]-B[0]), 0);
+    face_norm_b = flip_normal * (-face_norm_b) + (!flip_normal) * face_norm_b;
+    for (uchar fA = 0; fA < 4; ++fA) {
+        real_type_64 temp = dot(face_norms_a[fA], face_norm_b);
+        update_min_prod = tsi_A.vertex_on_surface[fA] && tsi_B.vertex_on_surface[3];
+        update_min_prod = update_min_prod && lt_64(temp, min_prod);
+        min_prod = update_min_prod * temp + (!update_min_prod) * min_prod;
+        best_a = update_min_prod * fA + (!update_min_prod) * best_a;
+        best_b = update_min_prod * 3 + (!update_min_prod) * best_b;
+        n = update_min_prod * face_norms_a[fA] + (!update_min_prod) * n;
+        a0 = update_min_prod * A[face_idx[fA][0]] + (!update_min_prod) * a0;
+        a1 = update_min_prod * A[face_idx[fA][1]] + (!update_min_prod) * a1;
+        h = update_min_prod * fabs(dot(n, a1 - a0) / 2) + (!update_min_prod) * h;
+    }
+    point_face_dist[0] = dot(face_norm_b, A[0] - B[0]);
+    lt_zero[0] = lt_zero[0] && lt_64(point_face_dist[0], 0);
+    point_face_dist[1] = dot(face_norm_b, A[1] - B[0]);
+    lt_zero[1] = lt_zero[1] && lt_64(point_face_dist[1], 0);
+    point_face_dist[2] = dot(face_norm_b, A[2] - B[0]);
+    lt_zero[2] = lt_zero[2] && lt_64(point_face_dist[2], 0);
+    point_face_dist[3] = dot(face_norm_b, A[3] - B[0]);
+    lt_zero[3] = lt_zero[3] && lt_64(point_face_dist[3], 0);
+    
+    // check whether we have contacts to report
+    bool report_contacts = best_a < 4 && best_b < 4;
+
+    // report vertices of tetrahedron a
+    //   if they are inside all four faces of tetrahedron b
+    for(uchar i = 0; i < 4; ++i) {
+        report_contact(
+                A[i], n, a0, h, test_pair_index,
+                contact_points, contact_points_size, report_contacts && lt_zero[i]);
+    }
+
+    // compute contact points of all edge/face pairs
+    point_face_dist[0] = dot(face_norms_a[0], B[0] - A[1]);
+    lt_zero[0] = lt_64(point_face_dist[0], 0);
+    point_face_dist[1] = dot(face_norms_a[0], B[1] - A[1]);
+    lt_zero[1] = lt_64(point_face_dist[1], 0);
+    point_face_dist[2] = dot(face_norms_a[0], B[2] - A[1]);
+    lt_zero[2] = lt_64(point_face_dist[2], 0);
+    point_face_dist[3] = dot(face_norms_a[0], B[3] - A[1]);
+    lt_zero[3] = lt_64(point_face_dist[3], 0);
+    for (uchar e = 0; e < 6; ++e) {
+        vector3_type_64 p = fma(
+                B[edge_table[e][1]] - B[edge_table[e][0]],
+                dot(A[1] - B[edge_table[e][0]], face_norms_a[0]) / dot(B[edge_table[e][1]] - B[edge_table[e][0]], face_norms_a[0]),
+                B[edge_table[e][0]]);
+        report_contact(
+                p, n, a0, h, test_pair_index,
+                contact_points, contact_points_size, report_contacts &&
+                    lt_64(point_face_dist[edge_table[e][0]] * point_face_dist[edge_table[e][1]], 0) &&
+                    lt_64(dot(p - A[0], face_norms_a[1]), 0) &&
+                    lt_64(dot(p - A[0], face_norms_a[2]), 0) &&
+                    lt_64(dot(p - A[0], face_norms_a[3]), 0));
+    }
+    
+    point_face_dist[0] = dot(face_norms_a[1], B[0] - A[0]);
+    lt_zero[0] = lt_zero[0] && lt_64(point_face_dist[0], 0);
+    point_face_dist[1] = dot(face_norms_a[1], B[1] - A[0]);
+    lt_zero[1] = lt_zero[1] && lt_64(point_face_dist[1], 0);
+    point_face_dist[2] = dot(face_norms_a[1], B[2] - A[0]);
+    lt_zero[2] = lt_zero[2] && lt_64(point_face_dist[2], 0);
+    point_face_dist[3] = dot(face_norms_a[1], B[3] - A[0]);
+    lt_zero[3] = lt_zero[3] && lt_64(point_face_dist[3], 0);
+    for (uchar e = 0; e < 6; ++e) {
+        vector3_type_64 p = fma(
+                B[edge_table[e][1]] - B[edge_table[e][0]],
+                dot(A[0] - B[edge_table[e][0]], face_norms_a[1]) / dot(B[edge_table[e][1]] - B[edge_table[e][0]], face_norms_a[1]),
+                B[edge_table[e][0]]);
+        report_contact(
+                p, n, a0, h, test_pair_index,
+                contact_points, contact_points_size, report_contacts &&
+                    lt_64(point_face_dist[edge_table[e][0]] * point_face_dist[edge_table[e][1]], 0) &&
+                    lt_64(dot(p - A[0], face_norms_a[2]), 0) &&
+                    lt_64(dot(p - A[0], face_norms_a[3]), 0) &&
+                    lt_64(dot(p - A[1], face_norms_a[0]), 0));
+    }
+
+    point_face_dist[0] = dot(face_norms_a[2], B[0] - A[0]);
+    lt_zero[0] = lt_zero[0] && lt_64(point_face_dist[0], 0);
+    point_face_dist[1] = dot(face_norms_a[2], B[1] - A[0]);
+    lt_zero[1] = lt_zero[1] && lt_64(point_face_dist[1], 0);
+    point_face_dist[2] = dot(face_norms_a[2], B[2] - A[0]);
+    lt_zero[2] = lt_zero[2] && lt_64(point_face_dist[2], 0);
+    point_face_dist[3] = dot(face_norms_a[2], B[3] - A[0]);
+    lt_zero[3] = lt_zero[3] && lt_64(point_face_dist[3], 0);
+    for (uchar e = 0; e < 6; ++e) {
+        vector3_type_64 p = fma(
+                B[edge_table[e][1]] - B[edge_table[e][0]],
+                dot(A[0] - B[edge_table[e][0]], face_norms_a[2]) / dot(B[edge_table[e][1]] - B[edge_table[e][0]], face_norms_a[2]),
+                B[edge_table[e][0]]);
+        report_contact(
+                p, n, a0, h, test_pair_index,
+                contact_points, contact_points_size, report_contacts &&
+                    lt_64(point_face_dist[edge_table[e][0]] * point_face_dist[edge_table[e][1]], 0) &&
+                    lt_64(dot(p - A[0], face_norms_a[3]), 0) &&
+                    lt_64(dot(p - A[1], face_norms_a[0]), 0) &&
+                    lt_64(dot(p - A[0], face_norms_a[1]), 0));
+    }
+
+    point_face_dist[0] = dot(face_norms_a[3], B[0] - A[0]);
+    lt_zero[0] = lt_zero[0] && lt_64(point_face_dist[0], 0);
+    point_face_dist[1] = dot(face_norms_a[3], B[1] - A[0]);
+    lt_zero[1] = lt_zero[1] && lt_64(point_face_dist[1], 0);
+    point_face_dist[2] = dot(face_norms_a[3], B[2] - A[0]);
+    lt_zero[2] = lt_zero[2] && lt_64(point_face_dist[2], 0);
+    point_face_dist[3] = dot(face_norms_a[3], B[3] - A[0]);
+    lt_zero[3] = lt_zero[3] && lt_64(point_face_dist[3], 0);
+    for (uchar e = 0; e < 6; ++e) {
+        vector3_type_64 p = fma(
+                B[edge_table[e][1]] - B[edge_table[e][0]],
+                dot(A[0] - B[edge_table[e][0]], face_norms_a[3]) / dot(B[edge_table[e][1]] - B[edge_table[e][0]], face_norms_a[3]),
+                B[edge_table[e][0]]);
+        report_contact(
+                p, n, a0, h, test_pair_index,
+                contact_points, contact_points_size, report_contacts &&
+                    lt_64(point_face_dist[edge_table[e][0]] * point_face_dist[edge_table[e][1]], 0) &&
+                    lt_64(dot(p - A[1], face_norms_a[0]), 0) &&
+                    lt_64(dot(p - A[0], face_norms_a[1]), 0) &&
+                    lt_64(dot(p - A[0], face_norms_a[2]), 0));
+    }
+    
+    // report vertices of tetrahedron b
+    //   if they are inside all four faces of tetrahedron a
+    for(uchar i = 0; i < 4; ++i) {
+        report_contact(
+                B[i], n, a0, h, test_pair_index,
+                contact_points, contact_points_size, report_contacts && lt_zero[i]);
+    }
+}
+
+#endif // KDOP_CL_COMPUTE_CONTACTS_CLH

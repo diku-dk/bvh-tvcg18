@@ -1,0 +1,52 @@
+#ifndef KDOP_CL_NODE_CLH
+#define KDOP_CL_NODE_CLH
+
+#ifndef __K
+#error "__K must be defined"
+#endif
+
+#include "kdop_cl_index_type.clh"
+#include "kdop_cl_real_type.clh"
+
+typedef struct Interval {
+    real_type lower;
+    real_type upper;
+} Interval;
+
+typedef struct Node {
+    Interval slabs[__K / 2];
+    index_type start;
+    index_type end;
+} Node;
+
+static bool node_is_leaf(Node n) {
+    return n.start == n.end;
+}
+
+static real_type node_size(Node n) {
+    real_type size = 0;
+    for(uchar k = 0; k < __K / 2; ++k) {
+        size += pow(n.slabs[k].upper - n.slabs[k].lower, 2);
+    }
+    return size;
+}
+
+static bool node_overlap(Node a, Node b) {
+    bool overlap = true;
+    for(uchar k = 0; k < __K / 2; ++k) {
+        overlap = overlap
+                && !(lt(a.slabs[k].upper, b.slabs[k].lower)
+                || lt(b.slabs[k].upper, a.slabs[k].lower));
+    }
+    return overlap;
+}
+
+static bool node_valid_kdop(Node n) {
+    bool valid = true;
+    for(uchar k = 0; k < __K / 2; ++k) {
+        valid = valid && n.slabs[k].lower <= n.slabs[k].upper;
+    }
+    return valid;
+}
+
+#endif // KDOP_CL_NODE_CLH

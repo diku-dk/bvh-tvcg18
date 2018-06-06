@@ -1,0 +1,254 @@
+#ifndef KDOP_CL_SAT_TETRAHEDRONS_CLH
+#define KDOP_CL_SAT_TETRAHEDRONS_CLH
+
+#include "kdop_cl_real_type_64.clh"
+#include "kdop_cl_vector3_type_64.clh"
+
+/* pretty much a blind copy of kdop_SAT_tetrahedrons.h */
+
+bool SAT_line(vector3_type_64, vector3_type_64, vector3_type_64, vector3_type_64, vector3_type_64, vector3_type_64, vector3_type_64);
+
+// define prototype function to make the Apple OpenCL compiler happy
+bool SAT_tetrahedrons(
+    vector3_type_64 *restrict A,
+    vector3_type_64 *restrict B);
+
+bool SAT_tetrahedrons(
+    vector3_type_64 *restrict A,
+    vector3_type_64 *restrict B
+    )
+{
+    real_type_64 face_table[4];
+    
+    vector3_type_64 face_normal = cross(A[1]-A[0],A[2]-A[0]);
+    uchar flip_normal = gt(dot(face_normal, A[3]-A[0]), 0);
+    face_normal = flip_normal * (-face_normal) * (!flip_normal) * face_normal;
+
+    face_table[0u] = dot(face_normal, B[0] - A[0]);
+    face_table[1u] = dot(face_normal, B[1] - A[0]);
+    face_table[2u] = dot(face_normal, B[2] - A[0]);
+    face_table[3u] = dot(face_normal, B[3] - A[0]);
+  
+    bool result =
+            gt(face_table[0], 0) && gt(face_table[1], 0) &&
+            gt(face_table[2], 0) && gt(face_table[3], 0);
+
+    face_normal = cross(A[2]-A[0],A[3]-A[0]);
+    flip_normal = gt(dot(face_normal, A[1]-A[0]), 0);
+    face_normal = flip_normal * (-face_normal) * (!flip_normal) * face_normal;
+
+    face_table[0u] = dot(face_normal, B[0] - A[0]);
+    face_table[1u] = dot(face_normal, B[1] - A[0]);
+    face_table[2u] = dot(face_normal, B[2] - A[0]);
+    face_table[3u] = dot(face_normal, B[3] - A[0]);
+
+    result = result ||
+            (gt(face_table[0], 0) && gt(face_table[1], 0) &&
+            gt(face_table[2], 0) && gt(face_table[3], 0));
+
+    face_normal = cross(A[1]-A[0],A[3]-A[0]);
+    flip_normal = gt(dot(face_normal, A[2]-A[0]), 0);
+    face_normal = flip_normal * (-face_normal) * (!flip_normal) * face_normal;
+
+    face_table[0u] = dot(face_normal, B[0] - A[0]);
+    face_table[1u] = dot(face_normal, B[1] - A[0]);
+    face_table[2u] = dot(face_normal, B[2] - A[0]);
+    face_table[3u] = dot(face_normal, B[3] - A[0]);
+
+    result = result ||
+            (gt(face_table[0], 0) && gt(face_table[1], 0) &&
+            gt(face_table[2], 0) && gt(face_table[3], 0));
+
+    face_normal = cross(A[2]-A[1],A[3]-A[1]);
+    flip_normal = gt(dot(face_normal, A[0]-A[1]), 0);
+    face_normal = flip_normal * (-face_normal) * (!flip_normal) * face_normal;
+
+    face_table[0u] = dot(face_normal, B[0] - A[1]);
+    face_table[1u] = dot(face_normal, B[1] - A[1]);
+    face_table[2u] = dot(face_normal, B[2] - A[1]);
+    face_table[3u] = dot(face_normal, B[3] - A[1]);
+
+    result = result ||
+            (gt(face_table[0], 0) && gt(face_table[1], 0) &&
+            gt(face_table[2], 0) && gt(face_table[3], 0));
+
+    face_normal = cross(B[1]-B[0],B[2]-B[0]);
+    flip_normal = gt(dot(face_normal, B[3]-B[0]), 0);
+    face_normal = flip_normal * (-face_normal) * (!flip_normal) * face_normal;
+
+    face_table[0u] = dot(face_normal, A[0] - B[0]);
+    face_table[1u] = dot(face_normal, A[1] - B[0]);
+    face_table[2u] = dot(face_normal, A[2] - B[0]);
+    face_table[3u] = dot(face_normal, A[3] - B[0]);
+
+    result = result ||
+            (gt(face_table[0], 0) && gt(face_table[1], 0) &&
+            gt(face_table[2], 0) && gt(face_table[3], 0));
+
+    face_normal = cross(B[2]-B[0],B[3]-B[0]);
+    flip_normal = gt(dot(face_normal, B[1]-B[0]), 0);
+    face_normal = flip_normal * (-face_normal) * (!flip_normal) * face_normal;
+
+    face_table[0u] = dot(face_normal, A[0] - B[0]);
+    face_table[1u] = dot(face_normal, A[1] - B[0]);
+    face_table[2u] = dot(face_normal, A[2] - B[0]);
+    face_table[3u] = dot(face_normal, A[3] - B[0]);
+
+    result = result ||
+            (gt(face_table[0], 0) && gt(face_table[1], 0) &&
+            gt(face_table[2], 0) && gt(face_table[3], 0));
+
+    face_normal = cross(B[1]-B[0],B[3]-B[0]);
+    flip_normal = gt(dot(face_normal, B[2]-B[0]), 0);
+    face_normal = flip_normal * (-face_normal) * (!flip_normal) * face_normal;
+
+    face_table[0u] = dot(face_normal, A[0] - B[0]);
+    face_table[1u] = dot(face_normal, A[1] - B[0]);
+    face_table[2u] = dot(face_normal, A[2] - B[0]);
+    face_table[3u] = dot(face_normal, A[3] - B[0]);
+
+    result = result ||
+            (gt(face_table[0], 0) && gt(face_table[1], 0) &&
+            gt(face_table[2], 0) && gt(face_table[3], 0));
+
+    face_normal = cross(B[2]-B[1],B[3]-B[1]);
+    flip_normal = gt(dot(face_normal, B[0]-B[1]), 0);
+    face_normal = flip_normal * (-face_normal) * (!flip_normal) * face_normal;
+
+    face_table[0u] = dot(face_normal, A[0] - B[1]);
+    face_table[1u] = dot(face_normal, A[1] - B[1]);
+    face_table[2u] = dot(face_normal, A[2] - B[1]);
+    face_table[3u] = dot(face_normal, A[3] - B[1]);
+
+    result = result ||
+            (gt(face_table[0], 0) && gt(face_table[1], 0) &&
+            gt(face_table[2], 0) && gt(face_table[3], 0));
+
+    vector3_type_64 edge_normal = cross(A[1]-A[0], B[1]-B[0]);
+    result = result || SAT_line(A[1], A[2], A[3], B[1], B[2], B[3], edge_normal);
+
+    edge_normal = cross(A[1]-A[0], B[2]-B[0]);
+    result = result || SAT_line(A[1], A[2], A[3], B[0], B[1], B[3], edge_normal);
+
+    edge_normal = cross(A[1]-A[0], B[3]-B[0]);
+    result = result || SAT_line(A[1], A[2], A[3], B[0], B[1], B[2], edge_normal);
+
+    edge_normal = cross(A[1]-A[0], B[2]-B[1]);
+    result = result || SAT_line(A[1], A[2], A[3], B[0], B[1], B[3], edge_normal);
+
+    edge_normal = cross(A[1]-A[0], B[3]-B[1]);
+    result = result || SAT_line(A[1], A[2], A[3], B[0], B[1], B[2], edge_normal);
+
+    edge_normal = cross(A[1]-A[0], B[3]-B[2]);
+    result = result || SAT_line(A[1], A[2], A[3], B[0], B[1], B[2], edge_normal);
+
+    edge_normal = cross(A[2]-A[0], B[1]-B[0]);
+    result = result || SAT_line(A[1], A[2], A[3], B[1], B[2], B[3], edge_normal);
+
+    edge_normal = cross(A[2]-A[0], B[2]-B[0]);
+    result = result || SAT_line(A[1], A[2], A[3], B[1], B[2], B[3], edge_normal);
+
+    edge_normal = cross(A[2]-A[0], B[3]-B[0]);
+    result = result || SAT_line(A[1], A[2], A[3], B[0], B[1], B[2], edge_normal);
+
+    edge_normal = cross(A[2]-A[0], B[2]-B[1]);
+    result = result || SAT_line(A[1], A[2], A[3], B[0], B[1], B[3], edge_normal);
+
+    edge_normal = cross(A[2]-A[0], B[3]-B[1]);
+    result = result || SAT_line(A[1], A[2], A[3], B[0], B[1], B[2], edge_normal);
+
+    edge_normal = cross(A[2]-A[0], B[3]-B[2]);
+    result = result || SAT_line(A[1], A[2], A[3], B[0], B[1], B[2], edge_normal);
+
+    edge_normal = cross(A[3]-A[0], B[1]-B[0]);
+    result = result || SAT_line(A[1], A[2], A[3], B[1], B[2], B[3], edge_normal);
+
+    edge_normal = cross(A[3]-A[0], B[2]-B[0]);
+    result = result || SAT_line(A[1], A[2], A[3], B[1], B[2], B[3], edge_normal);
+
+    edge_normal = cross(A[3]-A[0], B[3]-B[0]);
+    result = result || SAT_line(A[1], A[2], A[3], B[1], B[2], B[3], edge_normal);
+
+    edge_normal = cross(A[3]-A[0], B[2]-B[1]);
+    result = result || SAT_line(A[1], A[2], A[3], B[0], B[1], B[3], edge_normal);
+
+    edge_normal = cross(A[3]-A[0], B[3]-B[1]);
+    result = result || SAT_line(A[1], A[2], A[3], B[0], B[1], B[2], edge_normal);
+
+    edge_normal = cross(A[3]-A[0], B[3]-B[2]);
+    result = result || SAT_line(A[1], A[2], A[3], B[0], B[1], B[2], edge_normal);
+
+    edge_normal = cross(A[2]-A[1], B[1]-B[0]);
+    result = result || SAT_line(A[0], A[1], A[3], B[1], B[2], B[3], edge_normal);
+
+    edge_normal = cross(A[2]-A[1], B[2]-B[0]);
+    result = result || SAT_line(A[0], A[1], A[3], B[1], B[2], B[3], edge_normal);
+
+    edge_normal = cross(A[2]-A[1], B[3]-B[0]);
+    result = result || SAT_line(A[0], A[1], A[3], B[1], B[2], B[3], edge_normal);
+
+    edge_normal = cross(A[2]-A[1], B[2]-B[1]);
+    result = result || SAT_line(A[0], A[1], A[3], B[0], B[1], B[3], edge_normal);
+
+    edge_normal = cross(A[2]-A[1], B[3]-B[1]);
+    result = result || SAT_line(A[0], A[1], A[3], B[0], B[1], B[2], edge_normal);
+
+    edge_normal = cross(A[2]-A[1], B[3]-B[2]);
+    result = result || SAT_line(A[0], A[1], A[3], B[0], B[1], B[2], edge_normal);
+
+    edge_normal = cross(A[3]-A[1], B[1]-B[0]);
+    result = result || SAT_line(A[0], A[1], A[2], B[1], B[2], B[3], edge_normal);
+
+    edge_normal = cross(A[3]-A[1], B[2]-B[0]);
+    result = result || SAT_line(A[0], A[1], A[2], B[1], B[2], B[3], edge_normal);
+
+    edge_normal = cross(A[3]-A[1], B[3]-B[0]);
+    result = result || SAT_line(A[0], A[1], A[2], B[1], B[2], B[3], edge_normal);
+
+    edge_normal = cross(A[3]-A[1], B[2]-B[1]);
+    result = result || SAT_line(A[0], A[1], A[2], B[0], B[1], B[3], edge_normal);
+
+    edge_normal = cross(A[3]-A[1], B[3]-B[1]);
+    result = result || SAT_line(A[0], A[1], A[2], B[0], B[1], B[2], edge_normal);
+
+    edge_normal = cross(A[3]-A[1], B[3]-B[2]);
+    result = result || SAT_line(A[0], A[1], A[2], B[0], B[1], B[2], edge_normal);
+
+    edge_normal = cross(A[3]-A[2], B[1]-B[0]);
+    result = result || SAT_line(A[0], A[1], A[2], B[1], B[2], B[3], edge_normal);
+
+    edge_normal = cross(A[3]-A[2], B[2]-B[0]);
+    result = result || SAT_line(A[0], A[1], A[2], B[1], B[2], B[3], edge_normal);
+
+    edge_normal = cross(A[3]-A[2], B[3]-B[0]);
+    result = result || SAT_line(A[0], A[1], A[2], B[1], B[2], B[3], edge_normal);
+
+    edge_normal = cross(A[3]-A[2], B[2]-B[1]);
+    result = result || SAT_line(A[0], A[1], A[2], B[0], B[1], B[3], edge_normal);
+
+    edge_normal = cross(A[3]-A[2], B[3]-B[1]);
+    result = result || SAT_line(A[0], A[1], A[2], B[0], B[1], B[2], edge_normal);
+
+    edge_normal = cross(A[3]-A[2], B[3]-B[2]);
+    result = result || SAT_line(A[0], A[1], A[2], B[0], B[1], B[2], edge_normal);
+
+    return result;
+}
+
+inline bool SAT_line(
+        vector3_type_64 t0p0, vector3_type_64 t0p1, vector3_type_64 t0p2,
+        vector3_type_64 t1p0, vector3_type_64 t1p1, vector3_type_64 t1p2, vector3_type_64 n)
+{
+  real_type_64 t0d0 = dot(n, t0p0);
+  real_type_64 t0d1 = dot(n, t0p1);
+  real_type_64 t0d2 = dot(n, t0p2);
+
+  real_type_64 t1d0 = dot(n, t1p0);
+  real_type_64 t1d1 = dot(n, t1p1);
+  real_type_64 t1d2 = dot(n, t1p2);
+
+  return lt(fmax(fmax(t0d0, t0d1), t0d2), fmin(fmin(t1d0, t1d1), t1d2)) ||
+         gt(fmin(fmin(t0d0, t0d1), t0d2), fmax(fmax(t1d0, t1d1), t1d2));
+}
+
+#endif // KDOP_CL_SAT_TETRAHEDRONS_CLH

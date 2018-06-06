@@ -1,0 +1,35 @@
+#ifndef KDOP_CL_REAL_TYPE_64_CLH
+#define KDOP_CL_REAL_TYPE_64_CLH
+
+#include "kdop_cl_real_type.clh"
+
+#ifndef __USE_DOUBLE_PRECISION
+#warning "__USE_DOUBLE_PRECISION is undefined, using float"
+typedef float real_type_64;
+__constant const real_type_64 REAL_TYPE_64_EPSILON = FLT_EPSILON;
+__constant const real_type_64 MAX_REAL_TYPE_64 = MAXFLOAT;
+inline real_type_64 convert_real_type_64(real_type r) {
+    return convert_float(r);
+}
+#else
+#if __OPENCL_VERSION__ <= CL_VERSION_1_1
+// as of OpenCL 1.2 this is part of the core
+#pragma OPENCL EXTENSION cl_khr_fp64 : enable
+#endif // __OPENCL_VERSION__ <= CL_VERSION_1_1
+typedef double real_type_64;
+__constant const real_type_64 REAL_TYPE_64_EPSILON = DBL_EPSILON;
+__constant const real_type_64 MAX_REAL_TYPE_64 = DBL_MAX;
+inline real_type_64 convert_real_type_64(real_type r) {
+    return convert_double(r);
+}
+#endif // __USE_DOUBLE_PRECISION
+
+inline bool lt_64(real_type_64 a, real_type_64 b) {
+    return b - a > REAL_TYPE_64_EPSILON * 10;
+}
+
+inline bool gt_64(real_type_64 a, real_type_64 b) {
+    return a - b > REAL_TYPE_64_EPSILON * 10;
+}
+
+#endif // KDOP_CL_REAL_TYPE_64_CLH

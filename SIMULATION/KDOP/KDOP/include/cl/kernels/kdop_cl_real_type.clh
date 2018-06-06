@@ -1,0 +1,19 @@
+#ifndef KDOP_CL_REAL_TYPE_CLH
+#define KDOP_CL_REAL_TYPE_CLH
+
+typedef float real_type;
+
+inline bool lt(real_type a, real_type b) {
+    return b - a > FLT_EPSILON * 10;
+}
+
+inline bool gt(real_type a, real_type b) {
+    return a - b > FLT_EPSILON * 10;
+}
+
+#include "kdop_cl_real_type_64.clh"
+inline real_type convert_real_type(real_type_64 r) {
+	return convert_float(r);
+}
+
+#endif // KDOP_CL_REAL_TYPE_CLH

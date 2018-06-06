@@ -1,0 +1,14 @@
+#ifndef NARROW_CL_KERNELS_PATH_H
+#define NARROW_CL_KERNELS_PATH_H
+
+#include <string>
+
+namespace narrow {
+namespace details {
+namespace cl {
+std::string const kernels_path = "@PROJECT_SOURCE_DIR@/SIMULATION/NARROW/NARROW/include/cl/kernels/";
+} // namespace cl
+} // namespace details
+} // namespace narrow
+
+#endif // NARROW_CL_KERNELS_PATH_H

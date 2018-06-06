@@ -1,0 +1,33 @@
+include_directories(
+  ${PROJECT_SOURCE_DIR}/FOUNDATION/DIKUCL/DIKUCL/include
+)
+
+file(GLOB
+  DIKUCL_SOURCES
+  ${PROJECT_SOURCE_DIR}/FOUNDATION/DIKUCL/DIKUCL/src/*.cpp
+  ${PROJECT_SOURCE_DIR}/FOUNDATION/DIKUCL/DIKUCL/src/*.c
+  )
+
+file(GLOB 
+  DIKUCL_HEADERS 
+  ${PROJECT_SOURCE_DIR}/FOUNDATION/DIKUCL/DIKUCL/include/*.hpp
+  ${PROJECT_SOURCE_DIR}/FOUNDATION/DIKUCL/DIKUCL/include/*.h
+  )
+
+add_library( 
+  dikucl 
+  ${DIKUCL_SOURCES} 
+  ${DIKUCL_HEADERS} 
+  )
+
+target_link_libraries(
+  dikucl
+  ${OPENCL_LIBRARIES}
+  )
+
+set_target_properties(dikucl PROPERTIES DEBUG_POSTFIX "D")
+set_target_properties(dikucl PROPERTIES ARCHIVE_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/lib/")
+set_target_properties(dikucl PROPERTIES ARCHIVE_OUTPUT_DIRECTORY_DEBUG "${PROJECT_SOURCE_DIR}/lib/")
+set_target_properties(dikucl PROPERTIES ARCHIVE_OUTPUT_DIRECTORY_RELEASE "${PROJECT_SOURCE_DIR}/lib/")
+set_target_properties(dikucl PROPERTIES ARCHIVE_OUTPUT_DIRECTORY_MINSIZEREL "${PROJECT_SOURCE_DIR}/lib/")
+set_target_properties(dikucl PROPERTIES ARCHIVE_OUTPUT_DIRECTORY_RELWITHDEBINFO "${PROJECT_SOURCE_DIR}/lib/")

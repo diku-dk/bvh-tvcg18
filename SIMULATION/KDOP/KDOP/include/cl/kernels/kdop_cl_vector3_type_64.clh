@@ -1,0 +1,23 @@
+#ifndef KDOP_CL_VECTOR3_TYPE_64_CLH
+#define KDOP_CL_VECTOR3_TYPE_64_CLH
+
+#include "kdop_cl_vector3_type.clh"
+
+#ifndef __USE_DOUBLE_PRECISION
+#warning "__USE_DOUBLE_PRECISION is undefined, using float3"
+typedef float3 vector3_type_64;
+inline vector3_type_64 convert_vector3_type_64(vector3_type v) {
+    return convert_float3(v);
+}
+#else
+#if __OPENCL_VERSION__ <= CL_VERSION_1_1
+// as of OpenCL 1.2 this is part of the core
+#pragma OPENCL EXTENSION cl_khr_fp64 : enable
+#endif // __OPENCL_VERSION__ <= CL_VERSION_1_1
+typedef double3 vector3_type_64;
+inline vector3_type_64 convert_vector3_type_64(vector3_type v) {
+    return convert_double3(v);
+}
+#endif // __USE_DOUBLE_PRECISION
+
+#endif // KDOP_CL_VECTOR3_TYPE_64_CLH

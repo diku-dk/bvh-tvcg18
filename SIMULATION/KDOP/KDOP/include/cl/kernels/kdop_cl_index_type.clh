@@ -1,0 +1,11 @@
+#ifndef KDOP_CL_INDEX_TYPE_CLH
+#define KDOP_CL_INDEX_TYPE_CLH
+
+#ifndef __INDEX_TYPE
+#warning "__INDEX_TYPE should be defined, using uint"
+typedef uint index_type;
+#else
+typedef __INDEX_TYPE index_type;
+#endif // __INDEX_TYPE
+
+#endif // KDOP_CL_INDEX_TYPE_CLH

@@ -1,0 +1,12 @@
+#ifndef KDOP_CL_WORK_ITEM_CLH
+#define KDOP_CL_WORK_ITEM_CLH
+
+#include "kdop_cl_index_type.clh"
+
+typedef struct WorkItem {
+    index_type a;
+    index_type b;
+    index_type tp;
+} WorkItem;
+
+#endif // KDOP_CL_WORK_ITEM_CLH

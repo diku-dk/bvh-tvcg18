@@ -1,0 +1,11 @@
+#ifndef KDOP_CL_VECTOR3_TYPE_CLH
+#define KDOP_CL_VECTOR3_TYPE_CLH
+
+typedef float3 vector3_type;
+
+#include "kdop_cl_vector3_type_64.clh"
+inline vector3_type convert_vector3_type(vector3_type_64 v) {
+	return convert_float3(v);
+}
+
+#endif // KDOP_CL_VECTOR3_TYPE_CLH

@@ -1,0 +1,10 @@
+#ifndef KDOP_CL_TETRAHEDRON_CLH
+#define KDOP_CL_TETRAHEDRON_CLH
+
+#include "kdop_cl_index_type.clh"
+
+typedef struct Tetrahedron {
+    index_type vertex_idx[4];
+} Tetrahedron;
+
+#endif // KDOP_CL_TETRAHEDRON_CLH

@@ -378,11 +378,11 @@ namespace rigid_body
           logging << "### " << util::timestamp() << util::Log::newline();
         }
 
-        m_obj_path               = m_config_file.get_value( "obj_path",                       ""                 );
-        m_texture_path           = m_config_file.get_value( "texture_path",                   ""                 );
-        m_shader_path            = m_config_file.get_value( "shader_path",                    ""                 );
-        m_working_directory      = m_config_file.get_value( "working_directory",              ""                 );
-        m_output_path            = m_config_file.get_value( "output_path",                    ""                 );
+        m_obj_path               = m_config_file.get_path( "obj_path",                       ""                 );
+        m_texture_path           = m_config_file.get_path( "texture_path",                   ""                 );
+        m_shader_path            = m_config_file.get_path( "shader_path",                    ""                 );
+        m_working_directory      = m_config_file.get_path( "working_directory",              ""                 );
+        m_output_path            = m_config_file.get_path( "output_path",                    ""                 );
 
         m_xml_load_scene_file    = m_config_file.get_value( "xml_load_scene_file",            "in_scene.xml"     );
         m_xml_save_scene_file    = m_config_file.get_value( "xml_save_scene_file",            "out_scene.xml"    );
